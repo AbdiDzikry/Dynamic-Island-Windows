@@ -342,11 +342,13 @@ class DynamicIsland(QWidget):
         self.anim.setEasingCurve(QEasingCurve.Type.OutCubic)
 
         # Timers auto-minimize 2 tahap
+        # 1. Keluar dari detail (expanded): setelah 2 detik tidak disentuh -> pindah ke minimize (compact)
         self.collapse_timer = QTimer(self)
         self.collapse_timer.setSingleShot(True)
-        self.collapse_timer.setInterval(3000)
+        self.collapse_timer.setInterval(2000)
         self.collapse_timer.timeout.connect(self._on_collapse_timeout)
 
+        # 2. Setelah berada di minimize (compact): setelah 3 detik tidak disentuh -> pindah ke tucked (garis tersembunyi)
         self.tuck_timer = QTimer(self)
         self.tuck_timer.setSingleShot(True)
         self.tuck_timer.setInterval(3000)
@@ -564,17 +566,22 @@ class DynamicIsland(QWidget):
             return
 
         if self.is_tucked:
+            # Jika sedang di mode compact/tucked (tersembunyi) dan cursor masuk -> masuk ke minimize (compact bar)
             if is_inside:
                 self.untuck_to_compact()
         elif not self.is_expanded:
+            # Sedang di mode minimize (compact bar):
+            # Di sini kita TIDAK langsung expand ke detail saat hover, melainkan menunggu klik.
+            # Jika cursor sudah tidak di atas kotak selama 3 detik -> kembali ke tucked (compact tersembunyi)
             if is_inside:
                 if self.tuck_timer.isActive():
                     self.tuck_timer.stop()
-                self.expand_island()
             else:
                 if not self.tuck_timer.isActive():
                     self.tuck_timer.start(3000)
         else:
+            # Sedang di mode detail (expanded):
+            # Jika cursor sudah tidak di kotak detail selama 2 detik -> masuk ke minimize
             if is_inside:
                 if self.collapse_timer.isActive():
                     self.collapse_timer.stop()
@@ -582,7 +589,7 @@ class DynamicIsland(QWidget):
                     self.tuck_timer.stop()
             else:
                 if not self.collapse_timer.isActive():
-                    self.collapse_timer.start(3000)
+                    self.collapse_timer.start(2000)
 
     def _on_tick(self):
         if self.is_playing:
@@ -634,34 +641,43 @@ class DynamicIsland(QWidget):
             self.tuck_island()
 
     def untuck_to_compact(self):
+        """Hover dari tucked (garis tersembunyi) masuk ke minimize (compact bar)"""
         self.is_tucked = False
         self.is_expanded = False
+        self.collapse_timer.stop()
         self._sync_mode_widgets()
         new_x = (self.screen_width - self.compact_w) // 2
         self.anim.stop()
         self.anim.setStartValue(self.geometry())
         self.anim.setEndValue(QRect(new_x, self.init_y, self.compact_w, self.compact_h))
         self.anim.start()
-        self.tuck_timer.start(3000)
+        # Jika kursor menjauh dari minimize bar, timer 3 detik berjalan untuk kembali ke tucked
+        global_pos = QCursor.pos()
+        if not self.frameGeometry().contains(global_pos):
+            self.tuck_timer.start(3000)
+        else:
+            self.tuck_timer.stop()
 
     def enterEvent(self, event):
         self.collapse_timer.stop()
         self.tuck_timer.stop()
         if self.is_tucked:
+            # Hover saat tucked -> masuk ke mode minimize
             self.untuck_to_compact()
-        elif not self.is_expanded:
-            self.expand_island()
         super().enterEvent(event)
 
     def leaveEvent(self, event):
         if self.is_expanded:
+            # Meninggalkan kotak detail -> timer 2 detik sebelum masuk ke mode minimize
             if not self.note_edit.hasFocus():
-                self.collapse_timer.start(3000)
+                self.collapse_timer.start(2000)
         elif not self.is_tucked:
+            # Meninggalkan mode minimize -> timer 3 detik sebelum masuk ke mode compact/tucked
             self.tuck_timer.start(3000)
         super().leaveEvent(event)
 
     def expand_island(self):
+        """Masuk ke mode detail (expanded) saat diklik"""
         self.is_tucked = False
         self.is_expanded = True
         self.collapse_timer.stop()
@@ -674,6 +690,7 @@ class DynamicIsland(QWidget):
         self._sync_mode_widgets()
 
     def collapse_island(self):
+        """Masuk ke mode minimize (compact bar) dari mode detail"""
         self.is_expanded = False
         self.collapse_timer.stop()
         self._sync_mode_widgets()
@@ -682,9 +699,15 @@ class DynamicIsland(QWidget):
         self.anim.setStartValue(self.geometry())
         self.anim.setEndValue(QRect(new_x, self.init_y, self.compact_w, self.compact_h))
         self.anim.start()
-        self.tuck_timer.start(3000)
+        # Setelah masuk ke minimize, jika cursor tidak berada di atasnya, setelah 3 detik akan ke compact/tucked
+        global_pos = QCursor.pos()
+        if not self.frameGeometry().contains(global_pos):
+            self.tuck_timer.start(3000)
+        else:
+            self.tuck_timer.stop()
 
     def tuck_island(self):
+        """Masuk ke mode tucked (garis compact tersembunyi)"""
         self.is_tucked = True
         self.is_expanded = False
         self.tuck_timer.stop()
@@ -703,6 +726,7 @@ class DynamicIsland(QWidget):
             self.untuck_to_compact()
             return
 
+        # Jika sedang di mode minimize (compact bar) dan diklik -> Buka mode detail (expanded)!
         if not self.is_expanded:
             self.expand_island()
             return

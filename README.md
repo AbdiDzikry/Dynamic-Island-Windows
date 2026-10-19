@@ -57,10 +57,14 @@ Designed with clean glassmorphic aesthetics, fluid physics-inspired spring anima
 
 ---
 
-## 🎯 Smart Behavior & Performance
+## 🎯 Smart Behavior & Intuitive Flow
 
-- **Zero-Distraction Auto Collapse**: Automatically contracts into an ultra-slim pill (`130px`) when idle.
-- **Fluid Spring Hover Expansion**: Smoothly expands to `345px` on mouse hover, staying on top without stealing window focus.
+- **Compact & Discreet by Default**: Rests quietly as a minimal indicator bar at the top of your screen.
+- **Hover to Wake (Minimize)**: Hovering your mouse wakes the island into a compact mini bar showing title and visualizer.
+- **Click for Details**: Simply click the minimize bar to fluidly expand into the full command hub (`345px`).
+- **Smart 2-Stage Auto-Collapse**:
+  - When your cursor leaves the detail panel for **2 seconds**, it automatically collapses back to minimize.
+  - After **3 seconds** of no activity on minimize, it tucks smoothly back to its discreet compact state.
 - **Ultra Lightweight Footprint**: Consumes `< 1% CPU` and minimal RAM memory using event-driven PyQt6 rendering and hardware acceleration.
 - **Completely Offline & Private**: Zero telemetries, zero analytics, zero external network requests. All data stays strictly on your local PC.
 
